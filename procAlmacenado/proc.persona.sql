@@ -1,4 +1,64 @@
  
+
+delimiter //
+create procedure insert_persona(_ci int ,_nombre varchar(50),_apellidos varchar(50),
+_direccion text,_usuario varchar(50),_pass varchar(50),
+_tipo varchar(1), _foto varchar(45)  )
+begin
+  declare _res char ;
+	 declare _ci_pers int;
+	declare _ci_ad varchar(25);
+    set _ci_ad=(select p.ci from persona p where p.ci=_ci  );
+    if ( _ci_ad = _ci ) then
+		set _res = 0; 
+        select _res as resp;
+    else
+		insert into persona values(_ci,_nombre,_apellidos,_direccion, _usuario,_pass,default,default,_tipo,default
+		,default,default,default,"0",_foto);
+		set _ci_pers =(select p.ci from persona p where p.ci=_ci  );
+		if (_tipo = 'p') then
+			insert into paciente values(_ci_pers,default);
+		else
+			if(_tipo = 'e') then
+        		insert into enfermera values(_ci_pers,especialidad);
+			else
+				insert into doctor values(_ci_pers,especialidad);
+			end if;
+		end if;
+        set _res = 1;        
+        select _res as resp;
+   end if;    
+end;
+// delimiter ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- :::::::::::::::::::::::    PERSONA -- TABLA PERSONA
 -- ::::::::::: "ELIMINA"  
 DELIMITER //
@@ -101,52 +161,50 @@ END;
 -- SELECT * FROM PERSONA
 
 
-DELIMITER //
-CREATE PROCEDURE AAA_LOGIN_USER(_EMAIL VARCHAR(50), _PASS VARCHAR(50))
-BEGIN
-	DECLARE _ESTADO_USER BOOLEAN; -- USUARIO ESTA BLOQUEADO O NO LO ESTA
-	DECLARE _ID INT;		  -- ID DEL USUARIO
-	DECLARE _R INT;			  -- SI ES CORECTO EL LOGIN O NO ES
-	DECLARE _NOMB VARCHAR(50);
-    DECLARE _PASSW VARCHAR(50);-- CONTRA DEL USUARIO
-    DECLARE _CANT INT;			-- CANTIDAF DE INTENTOS
-    DECLARE _CANT_VISIT INT;   -- CANTIDAD DE VISITAS QUE TIENE EL USUARIO
+delimiter //
+create procedure aaa_login_user(_usuario varchar(50), _pass varchar(50))
+begin
+	declare _estado_user boolean; -- usuario esta bloqueado o no lo esta
+	declare _ci int;		  -- id del usuario
+	declare _r int;			  -- si es corecto el login o no es
+	declare _nomb varchar(50);
+    declare _passw varchar(50);-- contra del usuario
+    declare _cant int;			-- cantidaf de intentos
+ --   declare _cant_visit int;   -- cantidad de visitas que tiene el usuario
     
-	DECLARE EXIT HANDLER FOR SQLEXCEPTION
-	BEGIN
-		-- SHOW COUNT(*) ERRORS;
-		-- SELECT @@error_count;
-		-- SHOW ERRORS;
-		ROLLBACK;
-	END;
-    START TRANSACTION;
-		SET _ESTADO_USER = (SELECT A.ESTADO FROM PERSONA A WHERE A.EMAIL=_EMAIL);-- SI NO ESISTE EMAIL DEVUELVE VACIO
-		IF(_ESTADO_USER)THEN
-			SET _PASSW = (SELECT A.PASS FROM PERSONA A WHERE A.EMAIL=_EMAIL);
-			IF(_PASSW = _PASS) THEN
-				SET _ID = (SELECT A.ID FROM PERSONA A WHERE A.EMAIL=_EMAIL AND A.PASS=_PASS);
-				SET _CANT_VISIT = (SELECT A.CANT_INTENTO+1 FROM PERSONA A WHERE A.ID=_ID);
-				UPDATE PERSONA SET VISITAS = _CANT_VISIT WHERE ID=_ID;
-				SET _R=20; -- DATOS CORRECTOS
-				SELECT A.ID, A.NOMBRE, A.APELLIDOS,A.FOTO, _R AS RESULT FROM PERSONA A WHERE A.ID=_ID;--  OJO AQUI
-			ELSE
-				SET _ID = (SELECT A.ID FROM PERSONA A WHERE A.EMAIL=_EMAIL);
-				SET _CANT = (SELECT A.CANT_INTENTO+1 FROM PERSONA A WHERE A.EMAIL=_EMAIL);
-				UPDATE PERSONA SET CANT_INTENTO = _CANT WHERE ID=_ID;
-				SET _R=_CANT; -- PASS INCORECTO
-				IF(_CANT = 4)THEN
-					UPDATE PERSONA SET ESTADO = 0 WHERE ID=_ID; -- USUARIO BLOQUEADO
-					SELECT _R AS RESULT;
-				ELSE
-					SELECT _R AS RESULT; -- NUMERO DE INTENTOS LLEGA AL 4 MESAJE DE USUARIO BLOQUEADO
-				END IF;
-			END IF;
-		ELSE
-			SET _R=10; -- USUARIO  INHABILITADO O DATOS INCORRECTOS
-			SELECT _R AS RESULT;
-		END IF;
-    COMMIT;
-END;
-//DELIMITER ;
+	declare exit handler for sqlexception
+	begin
+		-- show count(*) errors;
+		-- select @@error_count;
+		-- show errors;
+		rollback;
+	end;
+    start transaction;
+		set _estado_user = (select a.estado from persona a where a.usuario=_usuario);-- si no esiste email devuelve vacio
+		if(_estado_user)then
+			set _passw = (select a.pass from persona a where a.usuario=_usuario);
+			if(_passw = _pass) then
+				set _ci = (select a.ci from persona a where a.pass=_pass and a.usuario=_usuario);
+				set _r=20; -- datos correctos
+				select a.ci, a.NOMBRE,a.usuario, a.apellido,a.foto, _r as RESULT from persona a where a.ci=_ci;--  ojo aqui
+			else
+				set _ci = (select a.ci from persona a where a.usuario=_usuario);
+				set _cant = (select a.intento+1 from persona a where a.usuario=_usuario);
+				update persona set intento = _cant where ci=_ci;
+				set _r=_cant; -- pass incorecto
+				if(_cant = 4)then
+					update persona set estado = 0 where ci=_ci; -- usuario bloqueado
+					select a.intento from persona a where a.usuario=_usuario;
+				else
+					select a.intento from persona a where a.usuario=_usuario; -- numero de intentos llega al 4 mesaje de usuario bloqueado
+				end if;
+			end if;
+		else
+			set _r=10; -- usuario  inhabilitado o datos incorrectos
+			select _r as RESULT;
+		end if;
+    commit;
+end;
+//delimiter ;
 
 
